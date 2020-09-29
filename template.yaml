@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Acies Licens Server
+
+Parameters:
+
+  ServiceName:
+    Type: String
+    Description: Service name (use default)
+    Default: licens
+
+  Environment:
+    Type: String
+    AllowedValues:
+      - 'dev'
+      - 'test'
+      - 'prod'
+    Default: 'dev'
+
+  EnableDebugLog:
+    AllowedValues:
+      - true
+      - false
+    Default: false
+    Description: Enable or disable debug logging
+    Type: String  
+
+  APIDomain:
+    Type: String
+    Default: 'NONE'
+
+  APIStage:
+    Type: String
+    Default: 'dev'
+
+Conditions:
+  APIIsGlobal:
+    !Not [!Equals [!Ref APIDomain, 'NONE']]
+
+Resources:
+  LicensApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: acies-licens-server::acies_licens_server.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnetcore3.1
+      CodeUri: './src/acies-licens-server'
+      MemorySize: 256
+      Timeout: 60
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LicenseStorage
+      Events:
+        HttpRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: any
+            RestApiId: !Ref ApiGateway
+      Environment:
+        Variables:
+          ServiceName: !Ref ServiceName
+          APIStage: !Ref APIStage
+          LicenseTable: !Ref LicenseStorage
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref APIStage
+      EndpointConfiguration: EDGE
+      OpenApiVersion: 3.0.1
+      # ApiKeySourceType: HEADER
+      MinimumCompressionSize: 10 # bytes
+      MethodSettings:
+        - HttpMethod: '*'
+          LoggingLevel: ERROR
+          ResourcePath: '/*'
+          DataTraceEnabled: false
+          MetricsEnabled: false
+      GatewayResponses: # doesn't work with sam local
+        DEFAULT_4XX:
+          ResponseTemplates:
+            "application/json": '{"error":{"message":$context.error.messageString}}'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+        DEFAULT_5XX:
+          ResponseTemplates:
+            "application/json": '{"error":{"message":$context.error.messageString}}'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+
+  APIMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: APIIsGlobal
+    Properties:
+      RestApiId: !Ref ApiGateway
+      DomainName: !Ref APIDomain
+      BasePath: !Ref ServiceName
+      Stage: !Ref ApiGateway.Stage
+
+  LicenseStorage: 
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:  
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema: 
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST   

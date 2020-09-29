@@ -1,0 +1,10 @@
+bin/
+obj/
+packaged*.yaml
+.vs/
+FodyWeavers.*
+swagger.json
+src/CoreSales/Properties/launchSettings.json
+test/CoreSales.Tests/coresales.Tests.csproj.user
+test/CoreSales.Tests/Properties/launchSettings.json
+.vscode/
