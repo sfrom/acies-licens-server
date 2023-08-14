@@ -1,4 +1,4 @@
-echo Tilføj C:\Users\%username%\.dotnet\tools\dotnet-lambda.exe til undtagelsesliste, ellers ryger den i karantæne af (Trend Micro Security)
+echo Tilføjjjjjj C:\Users\%username%\.dotnet\tools\dotnet-lambda.exe til undtagelsesliste, ellers rygerrrrr den i karantæne af (Trend Micro Security)
 @echo off
 aws cloudformation validate-template --template-body file://template.yaml
 dotnet lambda package-ci --template template.yaml --output-template packaged.yaml --region eu-central-1 --configuration Release --framework netcoreapp3.1 --s3-bucket %2 --msbuild-parameters "/p:PublishReadyToRun=true /p:RuntimeIdentifier=win-x64 --self-contained false"
